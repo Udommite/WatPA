@@ -9,7 +9,14 @@ import {
   xlsxBuffer,
   downloadBlob,
   photoCatalog,
+  incomeExpenseXlsx,
 } from "./report-engine";
+import {
+  registerHtml,
+  incomeExpenseHtml,
+  htmlBlobUrl,
+  printHtml,
+} from "./report-html";
 import { importAssets } from "./store";
 export default function Reports({
   records,
@@ -137,11 +144,11 @@ export default function Reports({
           disabled={busy || !mapped.length}
           onClick={() =>
             void run(async () =>
-              setPreview(URL.createObjectURL(await pdfBlob(input))),
+              setPreview(htmlBlobUrl(registerHtml(input, location.origin + "/fonts/"))),
             )
           }
         >
-          ดูตัวอย่าง PDF
+          ดูตัวอย่าง
         </button>
         {preview && (
           <iframe
@@ -168,11 +175,11 @@ export default function Reports({
             disabled={busy || !accepted || !mapped.length}
             onClick={() =>
               void run(async () =>
-                downloadBlob(await pdfBlob(input), template.id + ".pdf"),
+                printHtml(registerHtml(input, location.origin + "/fonts/")),
               )
             }
           >
-            ดาวน์โหลด PDF
+            พิมพ์ / บันทึกเป็น PDF
           </button>
           <button
             className="primary"
@@ -198,6 +205,49 @@ export default function Reports({
             {error}
           </p>
         )}
+      </section>
+      <section className="panel">
+        <h3>สรุปบัญชีรายรับ - รายจ่าย (แบบที่ 1 สำหรับวัด)</h3>
+        <p>
+          แบบฟอร์มตามคู่มือไวยาวัจกร (PDF หน้า 227)
+          ระบบยังไม่มีข้อมูลบัญชีรายรับ-รายจ่าย จึงส่งออกเป็นแบบเปล่าพร้อมชื่อวัด
+        </p>
+        <div className="form-actions">
+          <button
+            disabled={busy}
+            onClick={() =>
+              void run(async () =>
+                printHtml(
+                  incomeExpenseHtml(temple, location.origin + "/fonts/"),
+                ),
+              )
+            }
+          >
+            พิมพ์ / บันทึกเป็น PDF
+          </button>
+          <button
+            disabled={busy}
+            onClick={() =>
+              void run(async () =>
+                downloadBlob(
+                  new Blob(
+                    [
+                      new Uint8Array(
+                        (await incomeExpenseXlsx(temple)) as ArrayBuffer,
+                      ),
+                    ],
+                    {
+                      type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                    },
+                  ),
+                  "income-expense-summary.xlsx",
+                ),
+              )
+            }
+          >
+            ดาวน์โหลด Excel
+          </button>
+        </div>
       </section>
       <section className="panel">
         <h3>บัญชีภาพทรัพย์สิน</h3>

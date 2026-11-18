@@ -5,7 +5,8 @@ import { mkdir, writeFile,readFile } from "node:fs/promises";
 import { createRequire } from "node:module";
 import path from "node:path";
 import { randomUUID } from "node:crypto";
-import { reportDefinition, xlsxBuffer,pdfBlob } from "../src/report-engine.ts";
+import { reportDefinition, xlsxBuffer,pdfBlob, incomeExpenseXlsx } from "../src/report-engine.ts";
+import { registerHtml, incomeExpenseHtml } from "../src/report-html.ts";
 import { registerRows, beDate } from "../shared/reports.ts";
 import { planImport, importDate } from "../shared/imports.ts";
 import type { RecordRow } from "../shared/model.ts";
@@ -158,4 +159,19 @@ test("import validates duplicate codes, unknown references, formulas and Buddhis
     )[0].errors.length,
   );
   assert.throws(() => importDate("2025-02-29"));
+});
+test("movable and income-expense forms render as HTML with TH SarabunPSK 16pt, bold title only", async () => {
+  const html = registerHtml({ type: "movable", temple: "วัดตัวอย่าง", records: [fixture()], locationName: () => "A" });
+  assert.match(html, /font-size:16pt/);
+  assert.match(html, /TH SarabunPSK/);
+  assert.ok(!html.includes("ฉบับตรวจสอบ"));
+  assert.match(html, /ทะเบียนสังหาริมทรัพย์ของวัด ตัวอย่าง/);
+  assert.equal((html.match(/font-weight:700/g) || []).length, 2); // @font-face bold + .title
+  const inc = incomeExpenseHtml("วัดตัวอย่าง");
+  assert.match(inc, /แบบที่ 1 สำหรับวัด/);
+  assert.match(inc, /ยอดคงเหลือ ณ วันที่/);
+  const book = new ExcelJS.Workbook();
+  await book.xlsx.load(await incomeExpenseXlsx("วัดตัวอย่าง"));
+  assert.equal(book.worksheets[0].getCell("A2").value, "สรุปบัญชีรายรับ - รายจ่าย");
+  assert.equal(book.worksheets[0].getCell("A2").font?.name, "TH SarabunPSK");
 });
